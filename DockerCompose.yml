@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  core-registry:
+    build:
+      context: ./ArchitectureValidationEngine(AVE)1
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://db:3306/avedb?createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: com.mysql.cj.jdbc.Driver
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: password
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    depends_on:
+      - db
+    restart: on-failure
+
+  realtime-gateway:
+    build:
+      context: ./realtime-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000"
+    environment:
+      SPRING_BOOT_URL: http://core-registry:8080
+      MONGODB_URI: mongodb://mongodb:27017/ave_health_log
+    depends_on:
+      - core-registry
+      - mongodb
+    restart: on-failure
+
+  ave-frontend:
+    build:
+      context: ./ave-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - realtime-gateway
+    restart: on-failure
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: avedb
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+      MYSQL_ROOT_PASSWORD: rootpassword
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    restart: always
+
+  mongodb:
+    image: mongo:latest
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    restart: always
+
+volumes:
+  mysql_data:
+  mongo_data:
